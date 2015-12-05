@@ -14,24 +14,26 @@ typedef struct Record {
   int rating; //0-5
   char remarks[SMS];
   struct Record *next;
+  struct Record *ref; //if this is not NULL, then the record is a reference to another record
 } Record;
 
 int charToInt(char);
 Record* parseInputFile(char*, Record*);
 Record* parseUserInput(Record*);
 Record* checkIfUniqueInList(Record *,int);
-Record* updateSong(Record*);
-Record* findSongList(Record*); //this returns a list
+Record* findSongList(Record*, char*); //this returns a list based on the query char*
+Record* userSelectFromList(Record*);
 void printList(Record *);
+void updateSong(Record*);
+void writeToFile(Record *, char *);
 
 void main(){
   Record *list = NULL;
   Record *tail;
   char input[1200];
   FILE *fp = fopen("m.input", "r+");
-  int i;
+  //load file to a linked list
   while (fgets(input, 1201, fp) != NULL){
-    printf("%s", input);
     if (list == NULL){
       list = parseInputFile(input, list);
       tail = list;
@@ -40,6 +42,8 @@ void main(){
       tail = tail -> next;
     }
   }
+  fclose(fp);
+  writeToFile(list, "m.out");
   printList(list);
 }
 
@@ -59,6 +63,7 @@ Record* parseInputFile(char* input, Record* list){
   Record *add = malloc(sizeof(Record));
   add -> next = NULL;
   add -> id = 0;
+  add -> ref = NULL;
   char *end = input + strlen(input) - 1;
   int ix = 0; //index for inputting the fields onto the Record node
   int field = 0;
@@ -110,6 +115,7 @@ Record* parseInputFile(char* input, Record* list){
 Record* parseUserInput(Record *list){
   Record *add = malloc(sizeof(Record));
   add -> next = NULL;
+  add -> ref = NULL;
   int id;
   while (1) {
     printf("ID: ");
@@ -148,6 +154,91 @@ Record* parseUserInput(Record *list){
   return add;
 }
 
+Record* userSelectFromList(Record * list){
+  printf("What song did you need? Specify by ID");
+  printList(list);
+  int input;
+  Record *select = NULL;
+  while (select == NULL){
+    scanf("%d", &input);
+    select = checkIfUniqueInList(list, input);
+    if (select == NULL) printf("Error: id not found.\n");
+  }
+  return select;
+}
+
+Record* findSongList(Record* list, char* query, char* input){
+  Record* newlist = NULL;
+  Record* current = NULL;
+  while (list != NULL){
+    if (strcmp(query, "Title") == 0){
+      if (strcmp(list -> title, input) == 0){
+        if (newlist == NULL){
+          newlist = createNodeRef(newlist, list);
+          current = newlist;
+        } else {
+          current -> next = createNodeRef(current, list);
+          current = current -> next;
+        }
+      }
+    } else if (strcmp(query, "Artist") == 0){
+      if (strcmp(list -> artist, input) == 0){
+        if (newlist == NULL){
+          newlist = createNodeRef(newlist, list);
+          current = newlist;
+        } else {
+          current -> next = createNodeRef(current, list);
+          current = current -> next;
+        }
+      }
+    } else if (strcmp(query, "Composer") == 0){
+      if (strcmp(list -> composer, input) == 0){
+        if (newlist == NULL){
+          newlist = createNodeRef(newlist, list);
+          current = newlist;
+        } else {
+          current -> next = createNodeRef(current, list);
+          current = current -> next;
+        }
+      }
+    } if (strcmp(query, "Album") == 0){
+      if (strcmp(list -> album, input) == 0){
+        if (newlist == NULL){
+          newlist = createNodeRef(newlist, list);
+          current = newlist;
+        } else {
+          current -> next = createNodeRef(current, list);
+          current = current -> next;
+        }
+      }
+    }
+    list = list -> next;
+  }
+  return newlist;
+}
+
+Record* createNodeRef(Record *ref){
+  Record *new = malloc(sizeof(Record));
+  new -> ref = ref;
+  new -> next = NULL;
+  copyNodes(new, ref);
+  return new;
+}
+
+//copies n2 to n1
+void copyNodes(Record *n1, Record *n2){
+  n1 -> id = n2 -> id;
+  strcpy(n1 -> title, n2 -> title);
+  strcpy(n1 -> artist, n2 -> artist);
+  strcpy(n1 -> composer, n2 -> composer);
+  strcpy(n1 -> album, n2 -> album);
+  strcpy(n1 -> genre, n2 -> genre);
+  n1 -> rating = n2 -> rating;
+  strcpy(n1 -> remarks, n2 -> remarks);
+}
+
+//returns the address of the specified node with the id
+//null if it is not in the list
 Record* checkIfUniqueInList(Record *list,int id){
   while (list != NULL){
     if (id == list -> id) return list;
@@ -157,7 +248,7 @@ Record* checkIfUniqueInList(Record *list,int id){
 }
 
 void printList(Record* list){
-  printf("ID\tTITLE\tARTIST\tCOMPOSER\tALBUM\tGENRE\tRATING\tREMARKS\t\n");
+  printf("ID\tTITLE\tARTIST\tCOMPOSER\tALBUM\tGENRE\tRATING\tREMARKS\n");
   while (list != NULL){
     printf("%d\t", list -> id);
     printf("%s\t", list -> title);
@@ -165,13 +256,39 @@ void printList(Record* list){
     printf("%s\t", list -> composer);
     printf("%s\t", list -> album);
     printf("%s\t", list -> genre);
-    printf("Rating: %d\t", list -> rating);
-    printf("Remarks: %s\t", list -> remarks);
+    printf("%d\t", list -> rating);
+    printf("%s", list -> remarks);
   //   printf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\n", list -> id, list -> title,
   //  list -> artist, list -> composer, list -> album, list -> genre,
   //  list -> rating, list -> remarks);
    list = list -> next;
   }
+}
+
+void writeToFile(Record *list, char *path){
+  FILE *fp = fopen(path, "w+");
+  char digits[3];
+  while (list != NULL){
+    snprintf(digits, 3, "%d", list -> id);
+    fputs(digits, fp);
+    fputs(",", fp);
+    fputs(list -> title, fp);
+    fputs(",", fp);
+    fputs(list -> artist, fp);
+    fputs(",", fp);
+    fputs(list -> composer, fp);
+    fputs(",", fp);
+    fputs(list -> album, fp);
+    fputs(",", fp);
+    fputs(list -> genre, fp);
+    fputs(",", fp);
+    snprintf(digits, 3, "%d", list -> rating);
+    fputs(digits, fp);
+    fputs(",", fp);
+    fputs(list -> remarks, fp);
+    list = list -> next;
+  }
+  fclose(fp);
 }
 
 int charToInt(char c){
