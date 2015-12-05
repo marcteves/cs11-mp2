@@ -20,19 +20,23 @@ int charToInt(char);
 Record* parseInputFile(char*, Record*);
 Record* parseUserInput(Record*);
 Record* checkIfUniqueInList(Record *,int);
+Record* updateSong(Record*);
+Record* findSongList(Record*); //this returns a list
 void printList(Record *);
-
 
 void main(){
   Record *list = NULL;
   Record *tail;
+  char input[1200];
+  FILE *fp = fopen("m.input", "r+");
   int i;
-  for (i = 0; i < 2; i++){
+  while (fgets(input, 1201, fp) != NULL){
+    printf("%s", input);
     if (list == NULL){
-      list = parseUserInput(list);
+      list = parseInputFile(input, list);
       tail = list;
     } else {
-      tail -> next = parseUserInput(list);
+      tail -> next = parseInputFile(input, list);
       tail = tail -> next;
     }
   }
@@ -50,27 +54,28 @@ void main(){
   Returns the address of a record node containing the values specified by
   the string input.
 */
+
 Record* parseInputFile(char* input, Record* list){
   Record *add = malloc(sizeof(Record));
   add -> next = NULL;
-  add -> id = -1;
-  char *end = input + strlen(input);
+  add -> id = 0;
+  char *end = input + strlen(input) - 1;
   int ix = 0; //index for inputting the fields onto the Record node
   int field = 0;
-  while (input < end){
-      if (*input != ','){
+  while (1){
+      if (*input != ',' && *input != '\n'){
         switch (field){
           case 0: //ID
           add -> id *= 10;
           add -> id += charToInt(*input);
           break;
-          case 1: //title
+          case 1:
           add -> title[ix] = *input;
           break;
-          case 2: //artist
+          case 2:
           add -> artist[ix] = *input;
           break;
-          case 3: //composer
+          case 3:
           add -> composer[ix] = *input;
           break;
           case 4:
@@ -80,7 +85,7 @@ Record* parseInputFile(char* input, Record* list){
           add -> genre[ix] = *input;
           break;
           case 6:
-          add -> rating = charToInt(*input);
+          if (charToInt(*input) > 0) add -> rating = charToInt(*input);
           break;
           case 7:
           add -> remarks[ix] = *input;
@@ -95,37 +100,9 @@ Record* parseInputFile(char* input, Record* list){
       }
     input++;
     if (input >= end){
-      switch (field){
-        case 0: //ID
-        add -> id *= 10;
-        add -> id += charToInt(*input);
-        break;
-        case 1: //title
-        add -> title[ix] = *input;
-        break;
-        case 2: //artist
-        add -> artist[ix] = *input;
-        break;
-        case 3: //composer
-        add -> composer[ix] = *input;
-        break;
-        case 4:
-        add -> album[ix] = *input;
-        break;
-        case 5:
-        add -> genre[ix] = *input;
-        break;
-        case 6:
-        add -> rating = charToInt(*input);
-        break;
-        case 7:
-        add -> remarks[ix] = *input;
-        break;
-        default:
-        break;
-      }
+      add -> remarks[ix] = *input;
       break;
-      }
+    }
   }
   return add;
 }
@@ -180,11 +157,19 @@ Record* checkIfUniqueInList(Record *list,int id){
 }
 
 void printList(Record* list){
-  printf("ID\tTITLE\tARTIST\tCOMPOSER\tALBUM\tGENRE\tRATING\tREMARKS\t\n\n");
+  printf("ID\tTITLE\tARTIST\tCOMPOSER\tALBUM\tGENRE\tRATING\tREMARKS\t\n");
   while (list != NULL){
-    printf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\n", list -> id, list -> title,
-   list -> artist, list -> composer, list -> album, list -> genre,
-   list -> rating, list -> remarks);
+    printf("%d\t", list -> id);
+    printf("%s\t", list -> title);
+    printf("%s\t", list -> artist);
+    printf("%s\t", list -> composer);
+    printf("%s\t", list -> album);
+    printf("%s\t", list -> genre);
+    printf("Rating: %d\t", list -> rating);
+    printf("Remarks: %s\t", list -> remarks);
+  //   printf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\n", list -> id, list -> title,
+  //  list -> artist, list -> composer, list -> album, list -> genre,
+  //  list -> rating, list -> remarks);
    list = list -> next;
   }
 }
