@@ -160,6 +160,12 @@ Record* parseUserInput(Record *list){
   getchar();
   printf("Remarks: ");
   fgets(&(add -> remarks[0]), SMS + 1, stdin);
+  add -> title[strcspn(add -> title, "\n")] = 0;
+  add -> artist[strcspn(add -> artist, "\n")] = 0;
+  add -> composer[strcspn(add -> composer, "\n")] = 0;
+  add -> album[strcspn(add -> album, "\n")] = 0;
+  add -> genre[strcspn(add -> genre, "\n")] = 0;
+  add -> remarks[strcspn(add -> remarks, "\n")] = 0;
   printf("Record added!\n");
   // printRecord(add);
   return add;
@@ -168,6 +174,7 @@ Record* parseUserInput(Record *list){
 Record* checkIfUniqueInList(Record *list,int id){
   while (list != NULL){
     if (id == list -> id) return list;
+    list = list -> next;
   }
   return list;
 }
@@ -175,9 +182,10 @@ Record* checkIfUniqueInList(Record *list,int id){
 void printList(Record* list){
   printf("ID\tTITLE\tARTIST\tCOMPOSER\tALBUM\tGENRE\tRATING\tREMARKS\t\n\n");
   while (list != NULL){
-    printf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s", list -> id, list -> title,
+    printf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\n", list -> id, list -> title,
    list -> artist, list -> composer, list -> album, list -> genre,
    list -> rating, list -> remarks);
+   list = list -> next;
   }
 }
 
