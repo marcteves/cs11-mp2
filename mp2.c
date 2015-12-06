@@ -2,27 +2,29 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define SMS 200
+#define SMS 200 //Arbitrary max size of record fields
 
 /*TODO:
- -Make query non case sensitive
- -Free the nodes!
+ -documentation of code
 */
 
 typedef struct Record {
-  int id;
-  char title[SMS];
-  char artist[SMS];
-  char composer[SMS];
-  char album[SMS];
-  char genre[SMS]; //0-1-2
-  int rating; //0-5
-  char remarks[SMS];
+  int id; //UNIQUE id of the song in the library
+  char title[SMS]; //title of the song. cannot be empty
+  char artist[SMS]; //artist of the song.
+  char composer[SMS]; //composer of the song.
+  char album[SMS]; //album of the song. if empty, album is PRINTED as a single
+  char genre[SMS]; //genre of the song.
+  int rating; //0-5 only
+  char remarks[SMS]; //comments about the song.
   struct Record *next;
-  struct Record *ref; //if this is not NULL, then the record is a reference to another record
+  //if not NULL, this Record is a part of a list.
+  //if NULL, this Record is a single record or the head of a list with
+  //one element
+  struct Record *ref;
+  //if this is not NULL, then the record is a reference to another record
 } Record;
 
-int charToInt(char);
 Record* parseInputFile(char*, Record*);
 Record* parseUserInput(Record*);
 Record* checkIfUniqueInList(Record *,int);
@@ -47,15 +49,19 @@ void titleSort(Record *);
 void ratingSort(Record *);
 void normalSort(Record *);
 
+//misc functions
 void writeToFile(Record *, char *);
+char* lowCase(char *);
+int charToInt(char);
 
 void main(){
   Record *list = NULL;
   Record *tail = NULL;
   char input[1200];
   char path[200] = "m.input";
-  FILE *fp = fopen(path, "r+");
+
   //load file to a linked list
+  FILE *fp = fopen(path, "r+");
   while (fgets(input, 1200, fp) != NULL){
     if (list == NULL){
       list = parseInputFile(input, list);
@@ -68,7 +74,6 @@ void main(){
   fclose(fp);
   int option;
   while (1){
-    printList(list);+
     printf("Options:\n1-Add song\n2-Update song\n3-List by Query\n4-Exit\n");
     scanf("%d", &option);
     getchar();
@@ -89,6 +94,7 @@ void main(){
       writeToFile(list, path);
       break;
     }
+    printf("\n");
   }
 }
 
@@ -175,6 +181,10 @@ Record* parseUserInput(Record *list){
   }
   printf("Title: ");
   fgets(&(add -> title[0]), SMS, stdin);
+  while (add -> title[0] == '\n'){
+    printf("Title cannot be empty!\n");
+    fgets(&(add -> title[0]), SMS, stdin);
+  }
   printf("Artist: ");
   fgets(&(add -> artist[0]), SMS, stdin);
   printf("Composer: ");
@@ -310,19 +320,23 @@ void printListSort(Record *list){
   Record* refList;
   char query[30];
   char input[200];
-  printf("What song did you want to print? Specify with <Category>_<Value>");
-  fscanf(stdin, "%s %s", query, input);
-  printf("%s %s", query, input);
-  refList = findSongList(list, query, input);
-  if (strcmp(query, "artist") == 0){
+  char bigin[230];
+  printf("What song did you want to print? Specify with <Category>_<Value>\n");
+  fgets(&bigin[0], 230, stdin);
+  sscanf(&bigin[0], "%s %s", query, input);
+  printf("%s %s\n", query, input);
+  if (strcmp(lowCase(query), "all") != 0){
+    refList = findSongList(list, lowCase(query), lowCase(input));
+  }
+  if (strcmp(lowCase(query), "artist") == 0){
     artistSort(refList);
-    printListNoID(reflist);
-  } else if (strcmp(query, "title") == 0) {
+    printListNoID(refList);
+  } else if (strcmp(lowCase(query), "title") == 0) {
     titleSort(refList);
-    printListNoID(reflist);
-  } else if (strcmp(query, "all") == 0) {
-    printList(refList);
-  } else if (strcmp(query, "rating") == 0){
+    printListNoID(refList);
+  } else if (strcmp(lowCase(query), "all") == 0) {
+    printList(list);
+  } else if (strcmp(lowCase(query), "rating") == 0){
     int rating;
     sscanf(input, "%d", &rating);
     printf("%d", rating);
@@ -333,10 +347,10 @@ void printListSort(Record *list){
     }
     normalSort(refList);
     ratingSort(refList);
-    printListNoID(reflist);
+    printListNoID(refList);
   } else {
     normalSort(refList);
-    printListNoID(reflist);
+    printListNoID(refList);
   }
 }
 
@@ -403,38 +417,49 @@ void normalSort(Record* list){
 
 //updates the selected song in list
 void updateSong(Record * list){
-  char input[200];
-  char query[30];
-  Record* searchlist;
-  Record* update = NULL;
-  printf("Input title of song to be updated: ");
-  fgets(input, 200, stdin);
-  input[strcspn(input, "\n")] = 0;
-  searchlist = findSongList(list, "title", input);
-  if (searchlist -> next != NULL){ //if next is not null, there is more than one result
-    printf("Multiple song titles detected.\n");
-    update = userSelectFromList(searchlist);
+  if (list != NULL){
+    char input[200];
+    char query[30];
+    Record* searchlist;
+    Record* update = NULL;
+    printf("Input title of song to be updated: ");
+    fgets(input, 200, stdin);
+    input[strcspn(input, "\n")] = '\0';
+    searchlist = findSongList(list, "title", lowCase(input));
+    if (searchList != NULL){
+      if (searchlist -> next != NULL){ //if next is not null, there is more than one result
+        printf("Multiple song titles detected.\n");
+        update = userSelectFromList(searchlist);
+      } else {
+        update = createNodeRef(searchlist);
+      }
+      printList(update);
+      printf("What did you want to update?");
+      fgets(query, 30, stdin);
+      query[strcspn(query, "\n")] = 0;
+      printf("What did you want to replace it with?");
+      fgets(input, 200, stdin);
+      input[strcspn(input, "\n")] = 0;
+      replaceField(list, update -> ref, lowCase(query), input);
+    } else {
+      printf("Song record does not exist!\n");
+    }
   } else {
-    update = searchlist;
+    printf("List empty.\n");
   }
-  printList(update);
-  printf("What did you want to update?");
-  fgets(query, 30, stdin);
-  query[strcspn(query, "\n")] = 0;
-  printf("What did you want to replace it with?");
-  fgets(input, 200, stdin);
-  input[strcspn(input, "\n")] = 0;
-  replaceField(list, update -> ref, query, input);
 }
 
 void replaceField(Record* list, Record *update, char *query, char *input){
   //remember that records passed here are nodes with
   //non-NULL ref values
+  printf("s\n");
+  printf("%p", update -> ref);
   if (strcmp(query, "id") == 0){
     int digits;
-    snprintf(input, SMS, "%d", digits);
+    sscanf(input, "%d", &digits);
+    printf("%d", digits);
     if ((checkIfUniqueInList(list, digits)) == NULL){
-      snprintf(input, SMS, "%d", (update -> ref) -> id);
+      (update -> ref) -> id = digits;
     } else {
       printf("ID already taken. ID not updated.\n");
     }
@@ -449,7 +474,9 @@ void replaceField(Record* list, Record *update, char *query, char *input){
   } else if (strcmp(query, "genre") == 0){
     strcpy((update -> ref) -> genre, input);
   } else if (strcmp(query, "rating") == 0){
-    snprintf(input, SMS, "%d", (update -> ref) -> rating);
+    int digits;
+    sscanf(input, "%d", &digits);
+    (update -> ref) -> rating = digits;
   } else if (strcmp(query, "title") == 0){
     strcpy((update -> ref) -> title, input);
   } else  {
@@ -468,15 +495,19 @@ Record* checkIfUniqueInList(Record *list,int id){
 }
 
 void printListNoID(Record* list){
-  printf("TITLE\tARTIST\tCOMPOSER\tALBUM\tGENRE\tRATING\tREMARKS\n");
+  printf("TITLE\tARTIST\tCOMPOSER\t\tALBUM\tGENRE\tRATING\tREMARKS\n");
   while (list != NULL){
     printf("%s\t", list -> title);
     printf("%s\t", list -> artist);
-    printf("%s\t", list -> composer);
-    printf("%s\t", list -> album);
+    printf("%s\t\t", list -> composer);
+    if (list -> album[0] == 0){
+      printf("Single\t");
+    } else {
+      printf("%s\t", list -> album);
+    }
     printf("%s\t", list -> genre);
     printf("%d\t", list -> rating);
-    printf("%s", list -> remarks);
+    printf("%s\n", list -> remarks);
   //   printf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\n", list -> id, list -> title,
   //  list -> artist, list -> composer, list -> album, list -> genre,
   //  list -> rating, list -> remarks);
@@ -485,16 +516,20 @@ void printListNoID(Record* list){
 }
 
 void printList(Record* list){
-  printf("ID\tTITLE\tARTIST\tCOMPOSER\tALBUM\tGENRE\tRATING\tREMARKS\n");
+  printf("ID\tTITLE\tARTIST\tCOMPOSER\t\tALBUM\tGENRE\tRATING\tREMARKS\n");
   while (list != NULL){
     printf("%d\t", list -> id);
     printf("%s\t", list -> title);
     printf("%s\t", list -> artist);
-    printf("%s\t", list -> composer);
-    printf("%s\t", list -> album);
+    printf("%s\t\t", list -> composer);
+    if (list -> album[0] == 0){
+      printf("Single\t");
+    } else {
+      printf("%s\t", list -> album);
+    }
     printf("%s\t", list -> genre);
     printf("%d\t", list -> rating);
-    printf("%s", list -> remarks);
+    printf("%s\n", list -> remarks);
   //   printf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\n", list -> id, list -> title,
   //  list -> artist, list -> composer, list -> album, list -> genre,
   //  list -> rating, list -> remarks);
@@ -539,11 +574,13 @@ int charToInt(char c){
   Converts a string to lower-case, for CASE-INSENSITIVE
   purposes.
 */
-void lowCase(char *string){
+char* lowCase(char *string){
+  char *point = string;
   //WHY MUST IT BE CASE-INSENSITIVE T_T
   //I have to spam this function in many places now.
-  while (*string != '\0'){
-    *string = toLower(*string);
+  while (string < point + strlen(point)){
+    *string = tolower(*string);
     *string++;
   }
+  return point;
 }
