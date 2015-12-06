@@ -30,11 +30,13 @@ Record* checkIfUniqueInList(Record *,int);
 Record* findSongList(Record*, char*, char*); //this returns a list based on the query char*
 Record* userSelectFromList(Record*);
 Record* createNodeRef(Record*);
-Record* sortList(Record *);
+void printListSort(Record *);
 void printList(Record *);
 void updateSong(Record*);
 void artistSort(Record *);
 void titleSort(Record *);
+void ratingSort(Record *);
+void normalSort(Record *);
 void writeToFile(Record *, char *);
 void copyNodes(Record*, Record*);
 void replaceField(Record*, Record*, char*, char*);
@@ -59,8 +61,9 @@ void main(){
   int option;
   while (1){
     printList(list);
-    printf("Options:\n1-Add song\n2-Update song\n3-List by Query\n4-Exit");
+    printf("Options:\n1-Add song\n2-Update song\n3-List by Query\n4-Exit\n");
     scanf("%d", &option);
+    getchar();
     if (option == 1){
       if (list == NULL){
         list = parseUserInput(list);
@@ -72,10 +75,11 @@ void main(){
     } else if (option == 2){
       updateSong(list);
     } else if (option == 3){
-      list = sortList(list);
+      printListSort(list);
     } else if (option == 4){
       printf("Goodbye. Saving list to \\%s", path);
       writeToFile(list, path);
+      break;
     }
   }
 }
@@ -195,7 +199,7 @@ Record* userSelectFromList(Record * list){
   while (select == NULL){
     scanf("%d", &input);
     getchar();
-    select = checkIfUniqueInList(list, input);
+    select = createNodeRef(checkIfUniqueInList(list, input));
     if (select == NULL) printf("Error: id not found.\n");
   }
   return select;
@@ -205,7 +209,7 @@ Record* findSongList(Record* list, char* query, char* input){
   Record* newlist = NULL;
   Record* current = NULL;
   while (list != NULL){
-    if (strcmp(query, "Title") == 0){
+    if (strcmp(query, "title") == 0){
       if (strcmp(list -> title, input) == 0){
         if (newlist == NULL){
           newlist = createNodeRef(list);
@@ -215,7 +219,7 @@ Record* findSongList(Record* list, char* query, char* input){
           current = current -> next;
         }
       }
-    } else if (strcmp(query, "Artist") == 0){
+    } else if (strcmp(query, "artist") == 0){
       if (strcmp(list -> artist, input) == 0){
         if (newlist == NULL){
           newlist = createNodeRef(list);
@@ -225,7 +229,7 @@ Record* findSongList(Record* list, char* query, char* input){
           current = current -> next;
         }
       }
-    } else if (strcmp(query, "Composer") == 0){
+    } else if (strcmp(query, "composer") == 0){
       if (strcmp(list -> composer, input) == 0){
         if (newlist == NULL){
           newlist = createNodeRef(list);
@@ -235,8 +239,30 @@ Record* findSongList(Record* list, char* query, char* input){
           current = current -> next;
         }
       }
-    } if (strcmp(query, "Album") == 0){
+    } else if (strcmp(query, "album") == 0){
       if (strcmp(list -> album, input) == 0){
+        if (newlist == NULL){
+          newlist = createNodeRef(list);
+          current = newlist;
+        } else {
+          current -> next = createNodeRef(list);
+          current = current -> next;
+        }
+      }
+    } else if (strcmp(query, "genre") == 0){
+      if (strcmp(list -> genre, input) == 0){
+        if (newlist == NULL){
+          newlist = createNodeRef(list);
+          current = newlist;
+        } else {
+          current -> next = createNodeRef(list);
+          current = current -> next;
+        }
+      }
+    } else if (strcmp(query, "rating") == 0){
+      int rating;
+      sscanf(input, "%d", &rating);
+      if (list -> rating >= rating){
         if (newlist == NULL){
           newlist = createNodeRef(list);
           current = newlist;
@@ -252,6 +278,7 @@ Record* findSongList(Record* list, char* query, char* input){
 }
 
 Record* createNodeRef(Record *ref){
+  if (ref == NULL) return NULL;
   Record *new = malloc(sizeof(Record));
   new -> ref = ref;
   new -> next = NULL;
@@ -271,33 +298,99 @@ void copyNodes(Record *n1, Record *n2){
   strcpy(n1 -> remarks, n2 -> remarks);
 }
 
+void printListSort(Record *list){
+  Record* refList;
+  char query[30];
+  char input[200];
+  printf("What song did you want to print? Specify with <Category>_<Value>");
+  fscanf(stdin, "%s %s", query, input);
+  printf("%s %s", query, input);
+  refList = findSongList(list, query, input);
+  if (strcmp(query, "artist") == 0){
+    artistSort(refList);
+    printListNoID(reflist);
+  } else if (strcmp(query, "title") == 0) {
+    titleSort(refList);
+    printListNoID(reflist);
+  } else if (strcmp(query, "all") == 0) {
+    printList(refList);
+  } else if (strcmp(query, "rating") == 0){
+    int rating;
+    sscanf(input, "%d", &rating);
+    printf("%d", rating);
+    while (rating < 1 || rating > 5){
+      printf("Error: Rating should not exceed from 1 to 5.\n");
+      scanf("%d", &rating);
+      getchar();
+    }
+    normalSort(refList);
+    ratingSort(refList);
+    printListNoID(reflist);
+  } else {
+    normalSort(refList);
+    printListNoID(reflist);
+  }
+}
+
 //step 1: sort the list, ignoring similar fields
 //step 2: find subsets with similar fields, and sort that list.
 void artistSort(Record* list){
   Record* sortednode = NULL;
   Record* now;
-  Record* swapper;
-  while (sortednode  != list){
+  Record* swapper = malloc(sizeof(Record));
+  while (sortednode != list){
     now = list;
     while (now -> next != sortednode){
-      if (strcmp(now -> title, (now -> next) -> title) < 0 ){
+      if (strcmp(now -> title, (now -> next) -> title) > 0 ){
         copyNodes(swapper, now);
         copyNodes(now, now -> next);
         copyNodes(now -> next, swapper);
-        now = now -> next;
       }
+      now = now -> next;
     }
     sortednode = now;
   }
-  return list;
 }
 
 void titleSort(Record* list){
-
+  Record* sortednode = NULL;
+  Record* now;
+  Record* swapper = malloc(sizeof(Record));
+  while (sortednode != list){
+    now = list;
+    while (now -> next != sortednode){
+      if (strcmp(now -> artist, (now -> next) -> artist) > 0 ){
+        copyNodes(swapper, now);
+        copyNodes(now, now -> next);
+        copyNodes(now -> next, swapper);
+      }
+      now = now -> next;
+    }
+    sortednode = now;
+  }
 }
 
-void normalSort(Record* list, char *query){
+void ratingSort(Record* list){
+  Record* sortednode = NULL;
+  Record* now;
+  Record* swapper = malloc(sizeof(Record));
+  while (sortednode != list){
+    now = list;
+    while (now -> next != sortednode){
+      if (now -> rating < (now -> next) -> rating){
+        copyNodes(swapper, now);
+        copyNodes(now, now -> next);
+        copyNodes(now -> next, swapper);
+      }
+      now = now -> next;
+    }
+    sortednode = now;
+  }
+}
 
+void normalSort(Record* list){
+  artistSort(list);
+  titleSort(list);
 }
 
 //updates the selected song in list
@@ -309,7 +402,7 @@ void updateSong(Record * list){
   printf("Input title of song to be updated: ");
   fgets(input, 200, stdin);
   input[strcspn(input, "\n")] = 0;
-  searchlist = findSongList(list, "Title", input);
+  searchlist = findSongList(list, "title", input);
   if (searchlist -> next != NULL){ //if next is not null, there is more than one result
     printf("Multiple song titles detected.\n");
     update = userSelectFromList(searchlist);
@@ -323,7 +416,7 @@ void updateSong(Record * list){
   printf("What did you want to replace it with?");
   fgets(input, 200, stdin);
   input[strcspn(input, "\n")] = 0;
-  replaceField(list, update, query, input);
+  replaceField(list, update -> ref, query, input);
 }
 
 void replaceField(Record* list, Record *update, char *query, char *input){
@@ -364,6 +457,23 @@ Record* checkIfUniqueInList(Record *list,int id){
     list = list -> next;
   }
   return list;
+}
+
+void printListNoID(Record* list){
+  printf("TITLE\tARTIST\tCOMPOSER\tALBUM\tGENRE\tRATING\tREMARKS\n");
+  while (list != NULL){
+    printf("%s\t", list -> title);
+    printf("%s\t", list -> artist);
+    printf("%s\t", list -> composer);
+    printf("%s\t", list -> album);
+    printf("%s\t", list -> genre);
+    printf("%d\t", list -> rating);
+    printf("%s", list -> remarks);
+  //   printf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\n", list -> id, list -> title,
+  //  list -> artist, list -> composer, list -> album, list -> genre,
+  //  list -> rating, list -> remarks);
+   list = list -> next;
+  }
 }
 
 void printList(Record* list){
