@@ -33,6 +33,8 @@ Record* createNodeRef(Record*);
 Record* sortList(Record *);
 void printList(Record *);
 void updateSong(Record*);
+void artistSort(Record *);
+void titleSort(Record *);
 void writeToFile(Record *, char *);
 void copyNodes(Record*, Record*);
 void replaceField(Record*, Record*, char*, char*);
@@ -151,6 +153,7 @@ Record* parseUserInput(Record *list){
   while (1) {
     printf("ID: ");
     scanf("%d", &id);
+    getchar();
     if (checkIfUniqueInList(list, id) == NULL){ //no similar id found
       add -> id = id;
       break;
@@ -158,7 +161,6 @@ Record* parseUserInput(Record *list){
       printf("Error: ID already exists.\n");
     }
   }
-  getchar();
   printf("Title: ");
   fgets(&(add -> title[0]), SMS, stdin);
   printf("Artist: ");
@@ -271,29 +273,30 @@ void copyNodes(Record *n1, Record *n2){
 
 //step 1: sort the list, ignoring similar fields
 //step 2: find subsets with similar fields, and sort that list.
-Record* titleSort(Record* list){
+void artistSort(Record* list){
   Record* sortednode = NULL;
   Record* now;
+  Record* swapper;
   while (sortednode  != list){
     now = list;
     while (now -> next != sortednode){
-      if (strcmp(now -> title, (now -> next) -> title) > 0 ){
-        
+      if (strcmp(now -> title, (now -> next) -> title) < 0 ){
+        copyNodes(swapper, now);
+        copyNodes(now, now -> next);
+        copyNodes(now -> next, swapper);
+        now = now -> next;
       }
     }
+    sortednode = now;
   }
   return list;
 }
 
-List
-[04]-[1]-[2]-[3]-[x]
-
-
-Record* artistSort(Record* list){
+void titleSort(Record* list){
 
 }
 
-Record* normalSort(Record* list, char *query){
+void normalSort(Record* list, char *query){
 
 }
 
