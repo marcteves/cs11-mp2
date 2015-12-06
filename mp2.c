@@ -4,6 +4,12 @@
 
 #define SMS 200
 
+/*TODO:
+ -Make query non case sensitive
+ -Free the nodes!
+ -The sorting
+*/
+
 typedef struct Record {
   int id;
   char title[SMS];
@@ -21,19 +27,24 @@ int charToInt(char);
 Record* parseInputFile(char*, Record*);
 Record* parseUserInput(Record*);
 Record* checkIfUniqueInList(Record *,int);
-Record* findSongList(Record*, char*); //this returns a list based on the query char*
+Record* findSongList(Record*, char*, char*); //this returns a list based on the query char*
 Record* userSelectFromList(Record*);
+Record* createNodeRef(Record*);
+Record* sortList(Record *);
 void printList(Record *);
 void updateSong(Record*);
 void writeToFile(Record *, char *);
+void copyNodes(Record*, Record*);
+void replaceField(Record*, Record*, char*, char*);
 
 void main(){
   Record *list = NULL;
-  Record *tail;
+  Record *tail = NULL;
   char input[1200];
-  FILE *fp = fopen("m.input", "r+");
+  char path[200] = "m.input";
+  FILE *fp = fopen(path, "r+");
   //load file to a linked list
-  while (fgets(input, 1201, fp) != NULL){
+  while (fgets(input, 1200, fp) != NULL){
     if (list == NULL){
       list = parseInputFile(input, list);
       tail = list;
@@ -43,8 +54,28 @@ void main(){
     }
   }
   fclose(fp);
-  writeToFile(list, "m.out");
-  printList(list);
+  int option;
+  while (1){
+    printList(list);
+    printf("Options:\n1-Add song\n2-Update song\n3-List by Query\n4-Exit");
+    scanf("%d", &option);
+    if (option == 1){
+      if (list == NULL){
+        list = parseUserInput(list);
+        tail = list;
+      } else {
+        tail -> next = parseUserInput(list);
+        tail = tail -> next;
+      }
+    } else if (option == 2){
+      updateSong(list);
+    } else if (option == 3){
+      list = sortList(list);
+    } else if (option == 4){
+      printf("Goodbye. Saving list to \\%s", path);
+      writeToFile(list, path);
+    }
+  }
 }
 
 /*
@@ -129,20 +160,20 @@ Record* parseUserInput(Record *list){
   }
   getchar();
   printf("Title: ");
-  fgets(&(add -> title[0]), SMS + 1, stdin);
+  fgets(&(add -> title[0]), SMS, stdin);
   printf("Artist: ");
-  fgets(&(add -> artist[0]), SMS + 1, stdin);
+  fgets(&(add -> artist[0]), SMS, stdin);
   printf("Composer: ");
-  fgets(&(add -> composer[0]), SMS + 1, stdin);
+  fgets(&(add -> composer[0]), SMS, stdin);
   printf("Album: ");
-  fgets(&(add -> album[0]), SMS + 1, stdin);
+  fgets(&(add -> album[0]), SMS, stdin);
   printf("Genre: ");
-  fgets(&(add -> genre[0]), SMS + 1, stdin);
+  fgets(&(add -> genre[0]), SMS, stdin);
   printf("Rating: ");
   scanf("%d", &(add -> rating));
   getchar();
   printf("Remarks: ");
-  fgets(&(add -> remarks[0]), SMS + 1, stdin);
+  fgets(&(add -> remarks[0]), SMS, stdin);
   add -> title[strcspn(add -> title, "\n")] = 0;
   add -> artist[strcspn(add -> artist, "\n")] = 0;
   add -> composer[strcspn(add -> composer, "\n")] = 0;
@@ -150,17 +181,18 @@ Record* parseUserInput(Record *list){
   add -> genre[strcspn(add -> genre, "\n")] = 0;
   add -> remarks[strcspn(add -> remarks, "\n")] = 0;
   printf("Record added!\n");
-  // printRecord(add);
+  printList(add);
   return add;
 }
 
 Record* userSelectFromList(Record * list){
-  printf("What song did you need? Specify by ID");
   printList(list);
+  printf("What song did you need? Specify by ID\n");
   int input;
   Record *select = NULL;
   while (select == NULL){
     scanf("%d", &input);
+    getchar();
     select = checkIfUniqueInList(list, input);
     if (select == NULL) printf("Error: id not found.\n");
   }
@@ -174,40 +206,40 @@ Record* findSongList(Record* list, char* query, char* input){
     if (strcmp(query, "Title") == 0){
       if (strcmp(list -> title, input) == 0){
         if (newlist == NULL){
-          newlist = createNodeRef(newlist, list);
+          newlist = createNodeRef(list);
           current = newlist;
         } else {
-          current -> next = createNodeRef(current, list);
+          current -> next = createNodeRef(list);
           current = current -> next;
         }
       }
     } else if (strcmp(query, "Artist") == 0){
       if (strcmp(list -> artist, input) == 0){
         if (newlist == NULL){
-          newlist = createNodeRef(newlist, list);
+          newlist = createNodeRef(list);
           current = newlist;
         } else {
-          current -> next = createNodeRef(current, list);
+          current -> next = createNodeRef(list);
           current = current -> next;
         }
       }
     } else if (strcmp(query, "Composer") == 0){
       if (strcmp(list -> composer, input) == 0){
         if (newlist == NULL){
-          newlist = createNodeRef(newlist, list);
+          newlist = createNodeRef(list);
           current = newlist;
         } else {
-          current -> next = createNodeRef(current, list);
+          current -> next = createNodeRef(list);
           current = current -> next;
         }
       }
     } if (strcmp(query, "Album") == 0){
       if (strcmp(list -> album, input) == 0){
         if (newlist == NULL){
-          newlist = createNodeRef(newlist, list);
+          newlist = createNodeRef(list);
           current = newlist;
         } else {
-          current -> next = createNodeRef(current, list);
+          current -> next = createNodeRef(list);
           current = current -> next;
         }
       }
@@ -235,6 +267,96 @@ void copyNodes(Record *n1, Record *n2){
   strcpy(n1 -> genre, n2 -> genre);
   n1 -> rating = n2 -> rating;
   strcpy(n1 -> remarks, n2 -> remarks);
+}
+
+Record* sortList(Record* list){
+  char query[30];
+  if (strcmp(query, "id") == 0){
+  } else if (strcmp(query, "title") == 0){
+    list = titleSort(list);
+  } else if (strcmp(query, "artist") == 0){
+    list = artistSort(list);
+  } else if (strcmp(query, "composer") == 0){
+    list = normalSort(list, query);
+  } else if (strcmp(query, "album") == 0){
+    list = normalSort(list, query);
+  } else if (strcmp(query, "genre") == 0){
+    list = normalSort(list, query);
+  } else if (strcmp(query, "rating") == 0){
+    list = normalSort(list, query);
+  } else if (strcmp(query, "title") == 0){
+    list = normalSort(list, query);
+  } else  {
+    printf("Query invalid. Error unhandled. Nothing changed.\n");
+  }
+}
+
+Record* titleSort(Record* list){
+  
+}
+
+Record* artistSort(Record* list){
+
+}
+
+Record* normalSort(Record* list, char *query){
+
+}
+
+//updates the selected song in list
+void updateSong(Record * list){
+  char input[200];
+  char query[30];
+  Record* searchlist;
+  Record* update = NULL;
+  printf("Input title of song to be updated: ");
+  fgets(input, 200, stdin);
+  input[strcspn(input, "\n")] = 0;
+  searchlist = findSongList(list, "Title", input);
+  if (searchlist -> next != NULL){ //if next is not null, there is more than one result
+    printf("Multiple song titles detected.\n");
+    update = userSelectFromList(searchlist);
+  } else {
+    update = searchlist;
+  }
+  printList(update);
+  printf("What did you want to update?");
+  fgets(query, 30, stdin);
+  query[strcspn(query, "\n")] = 0;
+  printf("What did you want to replace it with?");
+  fgets(input, 200, stdin);
+  input[strcspn(input, "\n")] = 0;
+  replaceField(list, update, query, input);
+}
+
+void replaceField(Record* list, Record *update, char *query, char *input){
+  //remember that records passed here are nodes with
+  //non-NULL ref values
+  if (strcmp(query, "id") == 0){
+    int digits;
+    snprintf(input, SMS, "%d", digits);
+    if ((checkIfUniqueInList(list, digits)) == NULL){
+      snprintf(input, SMS, "%d", (update -> ref) -> id);
+    } else {
+      printf("ID already taken. ID not updated.\n");
+    }
+  } else if (strcmp(query, "title") == 0){
+    strcpy((update -> ref) -> title, input);
+  } else if (strcmp(query, "artist") == 0){
+    strcpy((update -> ref) -> artist, input);
+  } else if (strcmp(query, "composer") == 0){
+    strcpy((update -> ref) -> composer, input);
+  } else if (strcmp(query, "album") == 0){
+    strcpy((update -> ref) -> album, input);
+  } else if (strcmp(query, "genre") == 0){
+    strcpy((update -> ref) -> genre, input);
+  } else if (strcmp(query, "rating") == 0){
+    snprintf(input, SMS, "%d", (update -> ref) -> rating);
+  } else if (strcmp(query, "title") == 0){
+    strcpy((update -> ref) -> title, input);
+  } else  {
+    printf("Query invalid. Error unhandled. Nothing changed.\n");
+  }
 }
 
 //returns the address of the specified node with the id
