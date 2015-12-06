@@ -269,31 +269,25 @@ void copyNodes(Record *n1, Record *n2){
   strcpy(n1 -> remarks, n2 -> remarks);
 }
 
-Record* sortList(Record* list){
-  char query[30];
-  if (strcmp(query, "id") == 0){
-  } else if (strcmp(query, "title") == 0){
-    list = titleSort(list);
-  } else if (strcmp(query, "artist") == 0){
-    list = artistSort(list);
-  } else if (strcmp(query, "composer") == 0){
-    list = normalSort(list, query);
-  } else if (strcmp(query, "album") == 0){
-    list = normalSort(list, query);
-  } else if (strcmp(query, "genre") == 0){
-    list = normalSort(list, query);
-  } else if (strcmp(query, "rating") == 0){
-    list = normalSort(list, query);
-  } else if (strcmp(query, "title") == 0){
-    list = normalSort(list, query);
-  } else  {
-    printf("Query invalid. Error unhandled. Nothing changed.\n");
+//step 1: sort the list, ignoring similar fields
+//step 2: find subsets with similar fields, and sort that list.
+Record* titleSort(Record* list){
+  Record* sortednode = NULL;
+  Record* now;
+  while (sortednode  != list){
+    now = list;
+    while (now -> next != sortednode){
+      if (strcmp(now -> title, (now -> next) -> title) > 0 ){
+        
+      }
+    }
   }
+  return list;
 }
 
-Record* titleSort(Record* list){
-  
-}
+List
+[04]-[1]-[2]-[3]-[x]
+
 
 Record* artistSort(Record* list){
 
