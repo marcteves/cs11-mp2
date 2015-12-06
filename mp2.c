@@ -7,7 +7,6 @@
 /*TODO:
  -Make query non case sensitive
  -Free the nodes!
- -The sorting
 */
 
 typedef struct Record {
@@ -30,16 +29,25 @@ Record* checkIfUniqueInList(Record *,int);
 Record* findSongList(Record*, char*, char*); //this returns a list based on the query char*
 Record* userSelectFromList(Record*);
 Record* createNodeRef(Record*);
+void copyNodes(Record*, Record*);
+
+//Print class functions.
+//Take a list, and print it in some manner.
 void printListSort(Record *);
 void printList(Record *);
+void printListNoID(Record *);
+
+//Update class functions.
 void updateSong(Record*);
+void replaceField(Record*, Record*, char*, char*);
+
+//Some of the functions used by printListSort
 void artistSort(Record *);
 void titleSort(Record *);
 void ratingSort(Record *);
 void normalSort(Record *);
+
 void writeToFile(Record *, char *);
-void copyNodes(Record*, Record*);
-void replaceField(Record*, Record*, char*, char*);
 
 void main(){
   Record *list = NULL;
@@ -60,7 +68,7 @@ void main(){
   fclose(fp);
   int option;
   while (1){
-    printList(list);
+    printList(list);+
     printf("Options:\n1-Add song\n2-Update song\n3-List by Query\n4-Exit\n");
     scanf("%d", &option);
     getchar();
@@ -525,4 +533,17 @@ int charToInt(char c){
     return c - 48;
   }
   return -1;
+}
+
+/*
+  Converts a string to lower-case, for CASE-INSENSITIVE
+  purposes.
+*/
+void lowCase(char *string){
+  //WHY MUST IT BE CASE-INSENSITIVE T_T
+  //I have to spam this function in many places now.
+  while (*string != '\0'){
+    *string = toLower(*string);
+    *string++;
+  }
 }
